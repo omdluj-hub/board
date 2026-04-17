@@ -1,4 +1,4 @@
--- Final verification for automated migration
+-- Final verification for automated migration (v2)
+-- Port 6543 connection test
 -- Created at: 2026-04-17
--- If this succeeds, the DB_URL connection is working perfectly!
-SELECT now();
+SELECT now() as current_time_check;
