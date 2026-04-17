@@ -27,6 +27,14 @@ CREATE POLICY "Public read access to published posts" ON posts
 CREATE POLICY "Public insert access" ON posts
     FOR INSERT WITH CHECK (true);
 
+-- Allow public to update posts
+CREATE POLICY "Public update access" ON posts
+    FOR UPDATE USING (true);
+
+-- Allow public to delete posts
+CREATE POLICY "Public delete access" ON posts
+    FOR DELETE USING (true);
+
 -- Allow service role to perform all actions
 CREATE POLICY "Service role full access" ON posts
     FOR ALL USING (true);

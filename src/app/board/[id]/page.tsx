@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './detail.module.css';
+import PostActions from './PostActions';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -59,6 +60,8 @@ export default async function DetailPage({ params }: Props) {
           ))}
         </div>
       </div>
+
+      <PostActions post={question} />
 
       <div className={styles.answerSection}>
         {answers?.map((answer) => (

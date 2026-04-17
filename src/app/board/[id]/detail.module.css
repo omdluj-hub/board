@@ -59,8 +59,84 @@
 }
 
 .actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 50px;
-  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.editBtn, .deleteBtn {
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  background-color: white;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.editBtn:hover {
+  background-color: #f5f5f5;
+}
+
+.deleteBtn:hover {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-color: #ffcdd2;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.editInput, .editTextarea {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.editTextarea {
+  min-height: 200px;
+  resize: vertical;
+}
+
+.editButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.saveButton {
+  padding: 8px 20px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancelButton {
+  padding: 8px 20px;
+  background-color: #eee;
+  color: #666;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .listButton {
