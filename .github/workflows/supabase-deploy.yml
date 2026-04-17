@@ -25,11 +25,10 @@ jobs:
           if [ -z "${{ secrets.SUPABASE_PROJECT_ID }}" ]; then echo "Error: SUPABASE_PROJECT_ID is missing"; exit 1; fi
           if [ -z "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then echo "Error: SUPABASE_DB_PASSWORD is missing"; exit 1; fi
           
-          # Print the first 3 characters of Project ID to confirm it's being read
-          PROJECT_ID="${{ secrets.SUPABASE_PROJECT_ID }}"
-          echo "Connecting to project starting with: ${PROJECT_ID:0:3}..."
+          # 1. Link the project (using --project-ref here)
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
           
-          # Use --debug to see EXACTLY why it fails
-          supabase db push --debug --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          # 2. Push the migrations (no need for --project-ref here now)
+          supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
