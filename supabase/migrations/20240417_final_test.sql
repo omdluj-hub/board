@@ -1,4 +1,4 @@
--- Final verification for automated migration (v2)
--- Port 6543 connection test
+-- Final verification (v3) - Forced IPv4 connection test
+-- This test aims to resolve 'network is unreachable' issue.
 -- Created at: 2026-04-17
-SELECT now() as current_time_check;
+SELECT now() AS ipv4_test_time;
