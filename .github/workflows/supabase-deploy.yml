@@ -22,43 +22,42 @@ jobs:
 
       - name: Deploy Migrations
         run: |
-          # 1. Project ID 공백 제거 및 환경변수 설정
+          # 1. Project ID 정제 (소문자 변환 및 공백 제거)
           RAW_ID="${{ secrets.SUPABASE_PROJECT_ID }}"
-          PROJECT_ID=$(echo $RAW_ID | xargs)
+          PROJECT_ID=$(echo "$RAW_ID" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          echo "Using sanitized Project ID: ${PROJECT_ID:0:3}***"
           
-          # 2. 지역 정보 가져오기
-          PROJECT_INFO=$(curl -s -X GET "https://api.supabase.com/v1/projects/${PROJECT_ID}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}")
-          REGION=$(echo $PROJECT_INFO | jq -r '.region')
-          
-          if [ -z "$REGION" ] || [ "$REGION" == "null" ]; then
-            echo "Warning: Region not found via API, trying default ap-northeast-2"
-            REGION="ap-northeast-2"
-          fi
-          
+          # 2. 비밀번호 URL 인코딩
           DB_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ secrets.SUPABASE_DB_PASSWORD }}'''))")
           
-          # 3. AWS와 GCP 풀러 주소 후보군 생성
-          AWS_HOST="aws-0-${REGION}.pooler.supabase.com"
-          GCP_HOST="gcp-0-${REGION}.pooler.supabase.com"
+          # 3. 첫 번째 시도: 프로젝트 전용 풀러 주소 (추천 방식)
+          # db.[project-id].supabase.co 포트 6543은 IPv4를 지원하는 경우가 많습니다.
+          echo "Attempt 1: Trying db.${PROJECT_ID}.supabase.co on port 6543..."
+          DB_URL_1="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@db.${PROJECT_ID}.supabase.co:6543/postgres?sslmode=require"
           
-          echo "Trying AWS Pooler: $AWS_HOST"
-          # AWS 시도
-          DB_URL="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@${AWS_HOST}:6543/postgres?sslmode=require"
-          if supabase db push --db-url "$DB_URL"; then
-            echo "Successfully deployed via AWS Pooler"
+          if supabase db push --db-url "$DB_URL_1" --debug; then
+            echo "Success via Attempt 1!"
             exit 0
           fi
           
-          echo "AWS Pooler failed, trying GCP Pooler: $GCP_HOST"
-          # GCP 시도
-          DB_URL="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@${GCP_HOST}:6543/postgres?sslmode=require"
-          if supabase db push --db-url "$DB_URL"; then
-            echo "Successfully deployed via GCP Pooler"
+          # 4. 두 번째 시도: 지역 기반 AWS 풀러 (이전 방식)
+          # 지역 정보를 API로 다시 확인
+          PROJECT_INFO=$(curl -s -X GET "https://api.supabase.com/v1/projects/${PROJECT_ID}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}")
+          REGION=$(echo $PROJECT_INFO | jq -r '.region' | tr -d '[:space:]')
+          
+          if [ -z "$REGION" ] || [ "$REGION" == "null" ]; then REGION="ap-northeast-2"; fi
+          echo "Detected Region: $REGION"
+          
+          echo "Attempt 2: Trying aws-0-${REGION}.pooler.supabase.com on port 6543..."
+          DB_URL_2="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@aws-0-${REGION}.pooler.supabase.com:6543/postgres?sslmode=require"
+          
+          if supabase db push --db-url "$DB_URL_2" --debug; then
+            echo "Success via Attempt 2!"
             exit 0
           fi
           
-          echo "Both AWS and GCP poolers failed. Please check if PROJECT_ID is correct."
+          echo "All attempts failed. Please double check your Project ID and DB Password."
           exit 1
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
