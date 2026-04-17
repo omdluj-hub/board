@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /board/
+Disallow: /board/write
+Disallow: /api/
+
+Sitemap: https://your-domain.vercel.app/sitemap.xml
