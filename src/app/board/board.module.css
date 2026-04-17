@@ -20,6 +20,27 @@
   color: #666;
 }
 
+.writeButtonContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.writeButton {
+  padding: 10px 20px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.writeButton:hover {
+  background-color: #555;
+}
+
 .boardList {
   border-top: 2px solid #333;
 }

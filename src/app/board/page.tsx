@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import styles from './board.module.css';
+import WriteButton from './WriteButton';
 
 export const revalidate = 600; // Revalidate every 10 minutes (matching publish cron)
 
@@ -22,6 +23,8 @@ export default async function BoardPage() {
         <h1>후한의원 구미점 - 온라인 상담 게시판</h1>
         <p>여드름, 피부질환, 다이어트, 교통사고 한방 치료 상담</p>
       </header>
+
+      <WriteButton />
 
       <div className={styles.boardList}>
         <div className={styles.boardHeader}>
