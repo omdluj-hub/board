@@ -23,6 +23,10 @@ ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read access to published posts" ON posts
     FOR SELECT USING (published = true);
 
+-- Allow public to insert posts
+CREATE POLICY "Public insert access" ON posts
+    FOR INSERT WITH CHECK (true);
+
 -- Allow service role to perform all actions
 CREATE POLICY "Service role full access" ON posts
     FOR ALL USING (true);

@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase';
 import styles from './board.module.css';
 import WriteButton from './WriteButton';
 
-export const revalidate = 600; // Revalidate every 10 minutes (matching publish cron)
+export const dynamic = 'force-dynamic'; // Ensure the latest posts are always shown
+export const revalidate = 0; // Disable caching for the board list
 
 export default async function BoardPage() {
   const { data: posts, error } = await supabase
