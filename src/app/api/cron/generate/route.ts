@@ -5,10 +5,6 @@ import { addMinutes, setHours, setMinutes, startOfDay } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const CATEGORIES = [
   '여드름, 좁쌀여드름, 화농성여드름',
   '여드름자국, 여드름흉터, 새살침',
@@ -23,6 +19,10 @@ const CATEGORIES = [
 ];
 
 export async function GET(request: Request) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || 'dummy',
+  });
+
   const { searchParams } = new URL(request.url);
   const bypass = searchParams.get('bypass');
   
