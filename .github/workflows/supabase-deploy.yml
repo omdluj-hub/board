@@ -22,13 +22,14 @@ jobs:
 
       - name: Deploy Migrations
         run: |
-          if [ -z "${{ secrets.SUPABASE_PROJECT_ID }}" ]; then echo "Error: SUPABASE_PROJECT_ID is missing"; exit 1; fi
-          if [ -z "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then echo "Error: SUPABASE_DB_PASSWORD is missing"; exit 1; fi
+          # 1. 비밀번호 URL 인코딩 및 접속 주소 생성
+          # 특수문자가 포함된 비밀번호를 안전하게 처리하기 위해 Python을 사용합니다.
+          DB_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ secrets.SUPABASE_DB_PASSWORD }}'''))")
+          DB_URL="postgresql://postgres:${DB_PASSWORD}@db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co:5432/postgres"
           
-          # 1. Link the project (using --project-ref here)
-          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          echo "Connecting to Supabase DB via DB_URL..."
           
-          # 2. Push the migrations (no need for --project-ref here now)
-          supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          # 2. 마이그레이션 푸시 (연결 확인용 --debug 추가)
+          supabase db push --db-url "$DB_URL" --debug
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
