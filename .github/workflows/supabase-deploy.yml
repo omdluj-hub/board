@@ -20,23 +20,20 @@ jobs:
         with:
           version: latest
 
-      - name: Disable IPv6
-        # GitHub Runner에서 IPv6를 비활성화하여 강제로 IPv4를 사용하게 합니다.
+      - name: Prefer IPv4
+        # 시스템의 DNS 응답 우선순위를 IPv4로 강제 설정합니다.
         run: |
-          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-          sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+          sudo sed -i 's/#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
 
       - name: Deploy Migrations
         run: |
           # 1. 비밀번호 URL 인코딩
           DB_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ secrets.SUPABASE_DB_PASSWORD }}'''))")
           
-          # 2. IPv4 강제 연결을 위한 DB_URL 설정
-          # 포트 6543과 sslmode=require를 유지합니다.
+          # 2. DB_URL 설정 (포트 6543 사용)
           DB_URL="postgresql://postgres:${DB_PASSWORD}@db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co:6543/postgres?sslmode=require"
           
-          echo "Connecting to Supabase DB via IPv4 (Port 6543)..."
+          echo "Connecting to Supabase DB (Preferring IPv4)..."
           
           # 3. 마이그레이션 푸시
           supabase db push --db-url "$DB_URL"
