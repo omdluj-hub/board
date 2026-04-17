@@ -1,4 +1,4 @@
--- Final verification (v5) - Forced IPv4 via /etc/hosts
--- This bypasses DNS lookups completely to prevent any IPv6 issues.
+-- Final verification (v6) - Google DNS IPv4 Resolution
+-- This method forces IPv4 resolution even if the runner prefers IPv6.
 -- Created at: 2026-04-17
-SELECT now() AS final_test_v5;
+SELECT now() AS final_test_v6;

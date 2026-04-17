@@ -20,18 +20,26 @@ jobs:
         with:
           version: latest
 
-      - name: Force IPv4 via /etc/hosts
-        # DNS 조회를 생략하고 강제로 IPv4 주소만 사용하도록 설정합니다.
+      - name: Force IPv4 Resolution via Google DNS
+        # 기본 DNS 대신 구글 DNS(8.8.8.8)를 사용해 IPv4 주소를 강제로 찾습니다.
         run: |
           DB_HOST="db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co"
-          # dig 명령어로 해당 호스트의 IPv4 주소를 찾아냅니다.
-          DB_IP=$(dig +short A $DB_HOST | head -n1)
+          echo "Resolving $DB_HOST using Google DNS..."
+          
+          # 구글 DNS를 통해 IPv4(A 레코드) 주소를 가져옵니다.
+          DB_IP=$(dig @8.8.8.8 +short A $DB_HOST | head -n1)
+          
           if [ -z "$DB_IP" ]; then
-            echo "Failed to resolve IPv4 address for $DB_HOST"
+            echo "Google DNS also failed. Trying Python resolution..."
+            DB_IP=$(python3 -c "import socket; print(socket.gethostbyname('$DB_HOST'))")
+          fi
+          
+          if [ -z "$DB_IP" ]; then
+            echo "Error: Could not find IPv4 address for $DB_HOST"
             exit 1
           fi
-          echo "Resolved $DB_HOST to IPv4: $DB_IP"
-          # /etc/hosts에 등록하여 시스템이 무조건 이 IP를 사용하게 만듭니다.
+          
+          echo "Successfully resolved to IPv4: $DB_IP"
           echo "$DB_IP $DB_HOST" | sudo tee -a /etc/hosts
 
       - name: Deploy Migrations
@@ -42,9 +50,9 @@ jobs:
           # 2. DB_URL 설정 (포트 6543 사용)
           DB_URL="postgresql://postgres:${DB_PASSWORD}@db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co:6543/postgres?sslmode=require"
           
-          echo "Connecting to Supabase DB (Forced IPv4)..."
+          echo "Connecting to Supabase DB via resolved IPv4..."
           
-          # 3. 마이그레이션 푸시
-          supabase db push --db-url "$DB_URL"
+          # 3. 마이그레이션 푸시 (연결 실패 시 상세 로그 확인을 위해 --debug 추가)
+          supabase db push --db-url "$DB_URL" --debug
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
