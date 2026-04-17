@@ -1,4 +1,4 @@
--- Final verification (v4) - Prefers IPv4 via gai.conf
--- This is the most reliable way to handle dual-stack DNS in CI environments.
+-- Final verification (v5) - Forced IPv4 via /etc/hosts
+-- This bypasses DNS lookups completely to prevent any IPv6 issues.
 -- Created at: 2026-04-17
-SELECT now() AS final_test_v4;
+SELECT now() AS final_test_v5;

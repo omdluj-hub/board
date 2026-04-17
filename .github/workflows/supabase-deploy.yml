@@ -20,10 +20,19 @@ jobs:
         with:
           version: latest
 
-      - name: Prefer IPv4
-        # 시스템의 DNS 응답 우선순위를 IPv4로 강제 설정합니다.
+      - name: Force IPv4 via /etc/hosts
+        # DNS 조회를 생략하고 강제로 IPv4 주소만 사용하도록 설정합니다.
         run: |
-          sudo sed -i 's/#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+          DB_HOST="db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co"
+          # dig 명령어로 해당 호스트의 IPv4 주소를 찾아냅니다.
+          DB_IP=$(dig +short A $DB_HOST | head -n1)
+          if [ -z "$DB_IP" ]; then
+            echo "Failed to resolve IPv4 address for $DB_HOST"
+            exit 1
+          fi
+          echo "Resolved $DB_HOST to IPv4: $DB_IP"
+          # /etc/hosts에 등록하여 시스템이 무조건 이 IP를 사용하게 만듭니다.
+          echo "$DB_IP $DB_HOST" | sudo tee -a /etc/hosts
 
       - name: Deploy Migrations
         run: |
@@ -33,7 +42,7 @@ jobs:
           # 2. DB_URL 설정 (포트 6543 사용)
           DB_URL="postgresql://postgres:${DB_PASSWORD}@db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co:6543/postgres?sslmode=require"
           
-          echo "Connecting to Supabase DB (Preferring IPv4)..."
+          echo "Connecting to Supabase DB (Forced IPv4)..."
           
           # 3. 마이그레이션 푸시
           supabase db push --db-url "$DB_URL"
