@@ -32,8 +32,11 @@ export async function GET(request: Request) {
     (authHeader === `Bearer ${process.env.CRON_SECRET}`) || 
     (querySecret === process.env.CRON_SECRET);
 
-  if (!isAuthorized && process.env.NODE_ENV === 'production') {
-    return new Response('Unauthorized', { status: 401 });
+  if (process.env.NODE_ENV === 'production' && !isAuthorized) {
+    if (!process.env.CRON_SECRET) {
+      return new Response('Unauthorized: CRON_SECRET is missing in Vercel Environment Variables', { status: 401 });
+    }
+    return new Response(`Unauthorized: Secret mismatch. Make sure your URL matches the secret in Vercel.`, { status: 401 });
   }
 
   try {
