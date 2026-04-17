@@ -23,9 +23,16 @@ const CATEGORIES = [
 ];
 
 export async function GET(request: Request) {
-  // Check for cron secret to secure the endpoint
+  // Check for cron secret to secure the endpoint (allow both Header and Query Param)
+  const { searchParams } = new URL(request.url);
+  const querySecret = searchParams.get('cron_secret');
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
+  
+  const isAuthorized = 
+    (authHeader === `Bearer ${process.env.CRON_SECRET}`) || 
+    (querySecret === process.env.CRON_SECRET);
+
+  if (!isAuthorized && process.env.NODE_ENV === 'production') {
     return new Response('Unauthorized', { status: 401 });
   }
 
