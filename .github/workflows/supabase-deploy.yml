@@ -20,39 +20,34 @@ jobs:
         with:
           version: latest
 
-      - name: Force IPv4 Resolution via Google DNS
-        # 기본 DNS 대신 구글 DNS(8.8.8.8)를 사용해 IPv4 주소를 강제로 찾습니다.
-        run: |
-          DB_HOST="db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co"
-          echo "Resolving $DB_HOST using Google DNS..."
-          
-          # 구글 DNS를 통해 IPv4(A 레코드) 주소를 가져옵니다.
-          DB_IP=$(dig @8.8.8.8 +short A $DB_HOST | head -n1)
-          
-          if [ -z "$DB_IP" ]; then
-            echo "Google DNS also failed. Trying Python resolution..."
-            DB_IP=$(python3 -c "import socket; print(socket.gethostbyname('$DB_HOST'))")
-          fi
-          
-          if [ -z "$DB_IP" ]; then
-            echo "Error: Could not find IPv4 address for $DB_HOST"
-            exit 1
-          fi
-          
-          echo "Successfully resolved to IPv4: $DB_IP"
-          echo "$DB_IP $DB_HOST" | sudo tee -a /etc/hosts
-
       - name: Deploy Migrations
         run: |
-          # 1. 비밀번호 URL 인코딩
+          # 1. Supabase API를 통해 프로젝트 정보(지역) 가져오기
+          # SUPABASE_ACCESS_TOKEN을 사용하여 프로젝트의 상세 정보를 조회합니다.
+          PROJECT_INFO=$(curl -s -X GET "https://api.supabase.com/v1/projects/${{ secrets.SUPABASE_PROJECT_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}")
+          
+          REGION=$(echo $PROJECT_INFO | jq -r '.region')
+          
+          if [ -z "$REGION" ] || [ "$REGION" == "null" ]; then
+            echo "Failed to get project region. API Response: $PROJECT_INFO"
+            # 지역을 못 가져올 경우를 대비해 기본값(서울)을 시도해봅니다.
+            REGION="ap-northeast-2"
+          fi
+          
+          echo "Project Region: $REGION"
+          
+          # 2. IPv4를 지원하는 AWS Pooler 호스트 생성
+          # 이 호스트명은 대부분의 경우 IPv4 주소를 가지고 있습니다.
+          DB_HOST="aws-0-${REGION}.pooler.supabase.com"
           DB_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ secrets.SUPABASE_DB_PASSWORD }}'''))")
           
-          # 2. DB_URL 설정 (포트 6543 사용)
-          DB_URL="postgresql://postgres:${DB_PASSWORD}@db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co:6543/postgres?sslmode=require"
+          # 3. DB_URL 설정 (풀러용 포트 6543 사용, 사용자명 형식 주의: postgres.[project-id])
+          DB_URL="postgresql://postgres.${{ secrets.SUPABASE_PROJECT_ID }}:${DB_PASSWORD}@${DB_HOST}:6543/postgres?sslmode=require"
           
-          echo "Connecting to Supabase DB via resolved IPv4..."
+          echo "Connecting to Supabase IPv4 Pooler: $DB_HOST"
           
-          # 3. 마이그레이션 푸시 (연결 실패 시 상세 로그 확인을 위해 --debug 추가)
-          supabase db push --db-url "$DB_URL" --debug
+          # 4. 마이그레이션 푸시
+          supabase db push --db-url "$DB_URL"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
