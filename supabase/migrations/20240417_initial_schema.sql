@@ -1,4 +1,4 @@
--- Create posts table
+-- 1. 테이블 생성 (이미 있으면 건너뜀)
 CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     type TEXT NOT NULL CHECK (type IN ('question', 'answer')),
@@ -11,30 +11,27 @@ CREATE TABLE IF NOT EXISTS posts (
     parent_id UUID REFERENCES posts(id) ON DELETE CASCADE
 );
 
--- Index for efficient querying by published and scheduled_at
-CREATE INDEX idx_posts_published_scheduled ON posts (published, scheduled_at);
-CREATE INDEX idx_posts_type ON posts (type);
-CREATE INDEX idx_posts_parent_id ON posts (parent_id);
+-- 2. 인덱스 생성 (이미 있으면 건너뜀)
+CREATE INDEX IF NOT EXISTS idx_posts_published_scheduled ON posts (published, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_posts_type ON posts (type);
+CREATE INDEX IF NOT EXISTS idx_posts_parent_id ON posts (parent_id);
 
--- Enable RLS
+-- 3. RLS 활성화
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to published posts
-CREATE POLICY "Public read access to published posts" ON posts
-    FOR SELECT USING (published = true);
+-- 4. 기존 정책 삭제 후 재생성 (에러 방지용)
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Public read access to published posts" ON posts;
+    DROP POLICY IF EXISTS "Public insert access" ON posts;
+    DROP POLICY IF EXISTS "Public update access" ON posts;
+    DROP POLICY IF EXISTS "Public delete access" ON posts;
+    DROP POLICY IF EXISTS "Service role full access" ON posts;
+END $$;
 
--- Allow public to insert posts
-CREATE POLICY "Public insert access" ON posts
-    FOR INSERT WITH CHECK (true);
-
--- Allow public to update posts
-CREATE POLICY "Public update access" ON posts
-    FOR UPDATE USING (true);
-
--- Allow public to delete posts
-CREATE POLICY "Public delete access" ON posts
-    FOR DELETE USING (true);
-
--- Allow service role to perform all actions
-CREATE POLICY "Service role full access" ON posts
-    FOR ALL USING (true);
+-- 5. 정책 생성
+CREATE POLICY "Public read access to published posts" ON posts FOR SELECT USING (published = true);
+CREATE POLICY "Public insert access" ON posts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update access" ON posts FOR UPDATE USING (true);
+CREATE POLICY "Public delete access" ON posts FOR DELETE USING (true);
+CREATE POLICY "Service role full access" ON posts FOR ALL USING (true);
