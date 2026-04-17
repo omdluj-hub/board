@@ -22,32 +22,43 @@ jobs:
 
       - name: Deploy Migrations
         run: |
-          # 1. Supabase API를 통해 프로젝트 정보(지역) 가져오기
-          # SUPABASE_ACCESS_TOKEN을 사용하여 프로젝트의 상세 정보를 조회합니다.
-          PROJECT_INFO=$(curl -s -X GET "https://api.supabase.com/v1/projects/${{ secrets.SUPABASE_PROJECT_ID }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}")
+          # 1. Project ID 공백 제거 및 환경변수 설정
+          RAW_ID="${{ secrets.SUPABASE_PROJECT_ID }}"
+          PROJECT_ID=$(echo $RAW_ID | xargs)
           
+          # 2. 지역 정보 가져오기
+          PROJECT_INFO=$(curl -s -X GET "https://api.supabase.com/v1/projects/${PROJECT_ID}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}")
           REGION=$(echo $PROJECT_INFO | jq -r '.region')
           
           if [ -z "$REGION" ] || [ "$REGION" == "null" ]; then
-            echo "Failed to get project region. API Response: $PROJECT_INFO"
-            # 지역을 못 가져올 경우를 대비해 기본값(서울)을 시도해봅니다.
+            echo "Warning: Region not found via API, trying default ap-northeast-2"
             REGION="ap-northeast-2"
           fi
           
-          echo "Project Region: $REGION"
-          
-          # 2. IPv4를 지원하는 AWS Pooler 호스트 생성
-          # 이 호스트명은 대부분의 경우 IPv4 주소를 가지고 있습니다.
-          DB_HOST="aws-0-${REGION}.pooler.supabase.com"
           DB_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ secrets.SUPABASE_DB_PASSWORD }}'''))")
           
-          # 3. DB_URL 설정 (풀러용 포트 6543 사용, 사용자명 형식 주의: postgres.[project-id])
-          DB_URL="postgresql://postgres.${{ secrets.SUPABASE_PROJECT_ID }}:${DB_PASSWORD}@${DB_HOST}:6543/postgres?sslmode=require"
+          # 3. AWS와 GCP 풀러 주소 후보군 생성
+          AWS_HOST="aws-0-${REGION}.pooler.supabase.com"
+          GCP_HOST="gcp-0-${REGION}.pooler.supabase.com"
           
-          echo "Connecting to Supabase IPv4 Pooler: $DB_HOST"
+          echo "Trying AWS Pooler: $AWS_HOST"
+          # AWS 시도
+          DB_URL="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@${AWS_HOST}:6543/postgres?sslmode=require"
+          if supabase db push --db-url "$DB_URL"; then
+            echo "Successfully deployed via AWS Pooler"
+            exit 0
+          fi
           
-          # 4. 마이그레이션 푸시
-          supabase db push --db-url "$DB_URL"
+          echo "AWS Pooler failed, trying GCP Pooler: $GCP_HOST"
+          # GCP 시도
+          DB_URL="postgresql://postgres.${PROJECT_ID}:${DB_PASSWORD}@${GCP_HOST}:6543/postgres?sslmode=require"
+          if supabase db push --db-url "$DB_URL"; then
+            echo "Successfully deployed via GCP Pooler"
+            exit 0
+          fi
+          
+          echo "Both AWS and GCP poolers failed. Please check if PROJECT_ID is correct."
+          exit 1
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
