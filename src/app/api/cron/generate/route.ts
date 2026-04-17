@@ -58,8 +58,11 @@ export async function GET(request: Request) {
       const data = JSON.parse(completion.choices[0].message.content || '{}');
       
       // Calculate random times for today
-      // Question between 09:00 and 21:00
+      // Run this cron late at night (e.g., 23:30)
+      // These times will be in the "past" relative to 23:30, looking natural.
       const today = startOfDay(new Date());
+      
+      // Question between 09:00 and 21:00
       const qHour = 9 + Math.floor(Math.random() * 12);
       const qMin = Math.floor(Math.random() * 60);
       const scheduledQ = setMinutes(setHours(today, qHour), qMin);
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
       const delay = 10 + Math.floor(Math.random() * 50);
       const scheduledA = addMinutes(scheduledQ, delay);
 
-      // Save Question
+      // Save Question (Set published: true immediately)
       const { data: question, error: qError } = await supabaseAdmin
         .from('posts')
         .insert({
@@ -77,14 +80,14 @@ export async function GET(request: Request) {
           content: data.question_content,
           author_name: data.author_name,
           scheduled_at: scheduledQ.toISOString(),
-          published: false
+          published: true
         })
         .select()
         .single();
 
       if (qError) throw qError;
 
-      // Save Answer
+      // Save Answer (Set published: true immediately)
       const { error: aError } = await supabaseAdmin
         .from('posts')
         .insert({
@@ -92,7 +95,7 @@ export async function GET(request: Request) {
           content: data.answer_content,
           author_name: '후한의원 구미점',
           scheduled_at: scheduledA.toISOString(),
-          published: false,
+          published: true,
           parent_id: question.id
         });
 
