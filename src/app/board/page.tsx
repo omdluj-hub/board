@@ -2,9 +2,18 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import styles from './board.module.css';
 import WriteButton from './WriteButton';
+import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic'; // Ensure the latest posts are always shown
 export const revalidate = 0; // Disable caching for the board list
+
+export const metadata: Metadata = {
+  title: '온라인 상담 게시판 | 후한의원 구미점',
+  description: '구미 여드름, 다이어트, 피부질환 한방 치료 상담 결과입니다.',
+  verification: {
+    google: 'w5NQ-WHd-o_hcKnF8bJoc-WAOklZtZcNapkaNAwDm6A',
+  },
+};
 
 export default async function BoardPage() {
   const { data: posts, error } = await supabase
