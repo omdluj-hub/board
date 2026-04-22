@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
 
+// 1시간마다 사이트맵을 새로 갱신하도록 설정 (초 단위)
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 실제 배포 도메인 주소 (구글 서치 콘솔 등록 주소)
   const baseUrl = 'https://board-ten-orcin.vercel.app';
