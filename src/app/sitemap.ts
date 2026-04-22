@@ -2,17 +2,19 @@ import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // 실제 배포 도메인 주소로 업데이트되었습니다.
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://board-ten-orcin.vercel.app';
+  // 실제 배포 도메인 주소 (구글 서치 콘솔 등록 주소)
+  const baseUrl = 'https://board-ten-orcin.vercel.app';
 
   try {
-    // 모든 게시글 ID 가져오기 (비공개 글 제외)
+    // 1. 모든 공개된 게시글 ID 가져오기
     const { data: posts } = await supabase
       .from('posts')
       .select('id, scheduled_at')
       .eq('type', 'question')
-      .eq('published', true);
+      .eq('published', true)
+      .order('scheduled_at', { ascending: false });
 
+    // 2. 게시글 URL 생성
     const postUrls = (posts || []).map((post) => ({
       url: `${baseUrl}/board/${post.id}`,
       lastModified: post.scheduled_at ? new Date(post.scheduled_at) : new Date(),
@@ -20,6 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
+    // 3. 정적 페이지와 동적 게시글 합치기
     return [
       {
         url: baseUrl,
@@ -30,16 +33,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${baseUrl}/board`,
         lastModified: new Date(),
-        changeFrequency: 'daily' as const,
+        changeFrequency: 'always' as const,
         priority: 0.8,
       },
       ...postUrls,
     ];
   } catch (error) {
     console.error('Sitemap generation error:', error);
+    // 에러 발생 시 최소한의 기본 경로라도 반환
     return [
       {
         url: baseUrl,
+        lastModified: new Date(),
+      },
+      {
+        url: `${baseUrl}/board`,
         lastModified: new Date(),
       },
     ];
